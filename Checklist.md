@@ -60,9 +60,9 @@
 
 ## PHASE 6 — 사용자
 
-- [ ] 회원가입
-- [ ] 로그인
-- [ ] 로그아웃
+- [x] 회원가입
+- [x] 로그인
+- [x] 로그아웃
 - [x] MY 페이지
 - [x] GREEN LEVEL
 - [x] GREEN REPORT
@@ -92,8 +92,8 @@
 - [x] 미션 기록 Supabase 저장
 - [x] 상품 데이터 Supabase 연결
 - [x] 구매내역 Supabase 저장
-- [ ] 새로고침 후 데이터 유지
-- [ ] 다른 기기 로그인 테스트
+- [x] 새로고침 후 데이터 유지
+- [x] 다른 기기 로그인 테스트
 
 
 ## PHASE 9 — 날씨
@@ -117,25 +117,27 @@
 
 ## PHASE 11 — Render 배포
 
-- [ ] Render 서비스 생성
-- [ ] Git 저장소 연결
-- [ ] 환경변수 등록
-- [ ] Build 성공
-- [ ] 배포 성공
-- [ ] 배포 URL 접속
-- [ ] 회원가입 테스트
-- [ ] 로그인 테스트
-- [ ] 미션 테스트
-- [ ] 포인트 적립 테스트
-- [ ] Reward 구매 테스트
+- [x] Render 서비스 생성
+- [x] Git 저장소 연결
+- [x] 환경변수 등록
+- [x] Build 성공
+- [x] 배포 성공
+- [x] 배포 URL 접속
+- [x] 회원가입 테스트
+- [x] 로그인 테스트
+- [x] 미션 테스트
+- [x] 포인트 적립 테스트
+- [x] Reward 구매 테스트
 
 
 ## FINAL CHECK
 
-- [ ] PROJECT.md 요구사항 누락 검사
-- [ ] 모바일 화면 검사
-- [ ] 정상 상태 Blue 확인
-- [ ] Warning/Error Red 확인
-- [ ] Supabase 보안 확인
-- [ ] 전체 기능 회귀 테스트
-- [ ] 최종 배포 확인
+- [x] PROJECT.md 요구사항 누락 검사
+- [x] 모바일 화면 검사
+- [x] 정상 상태 Blue 확인
+- [x] Warning/Error Red 확인
+- [x] Supabase 보안 확인
+- [x] 전체 기능 회귀 테스트
+- [x] 최종 배포 확인
+
+> 보안 확인 메모: 사용자 데이터 RLS와 공개 키 구성을 검증했습니다. Supabase Security Advisor의 추가 권장사항으로 Auth의 Leaked Password Protection 활성화 경고 1건이 남아 있습니다.
