@@ -1,0 +1,13 @@
+{
+  "name": "carrier-greenon",
+  "version": "1.0.0",
+  "private": true,
+  "description": "캐리어 에어컨 사용자를 위한 ESG 친환경 냉방 미션과 리워드 웹앱",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check app.js && node --check config.js"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
