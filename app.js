@@ -79,6 +79,7 @@ let currentUser = null;
 let currentProfile = null;
 let activeMissionDefinition = null;
 let userMissionRecordId = null;
+let authLoadVersion = 0;
 
 /** 현재 미션과 에어컨 상태를 각각 브라우저에 임시 저장합니다. */
 function clearLegacyLocalState() {
@@ -453,16 +454,32 @@ async function refreshWalletAndOrders() {
 }
 
 /** 로그인 직후 사용자에게 허용된 데이터만 RLS를 거쳐 불러옵니다. */
-async function loadRemoteAppData() {
+async function loadRemoteAppData(loadVersion = authLoadVersion, retryCount = 0) {
   if (!supabaseClient || !currentUser) return;
+  const userId = currentUser.id;
 
   const [missionDefinitionResult, airconResult, rewardResult] = await Promise.all([
     supabaseClient.from('missions').select('*').eq('is_active', true).limit(1).maybeSingle(),
-    supabaseClient.from('aircon_status').select('*').eq('user_id', currentUser.id).maybeSingle(),
+    supabaseClient.from('aircon_status').select('*').eq('user_id', userId).maybeSingle(),
     supabaseClient.from('rewards').select('*').eq('is_active', true).order('price'),
   ]);
 
+  // 로그아웃 또는 다른 사용자 로그인 뒤에 끝난 이전 요청은 현재 화면에 반영하지 않습니다.
+  if (loadVersion !== authLoadVersion || currentUser?.id !== userId) return;
+
   if (missionDefinitionResult.error || airconResult.error || rewardResult.error) {
+    const errors = [missionDefinitionResult.error, airconResult.error, rewardResult.error].filter(Boolean);
+    const sessionWasNotReady = errors.some((error) => error.status === 401);
+
+    // 앱 시작과 빠른 로그인이 겹치면 첫 사용자 요청만 이전 인증 상태로 나갈 수 있어 한 번 재확인합니다.
+    if (sessionWasNotReady && retryCount === 0) {
+      const { data } = await supabaseClient.auth.getSession();
+      if (data.session?.user.id === userId && loadVersion === authLoadVersion) {
+        await new Promise((resolve) => setTimeout(resolve, 350));
+        return loadRemoteAppData(loadVersion, retryCount + 1);
+      }
+    }
+
     showToast('GreenON 데이터를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.');
     return;
   }
@@ -491,6 +508,8 @@ async function loadRemoteAppData() {
       showToast('오늘의 미션 기록을 불러오지 못했어요.');
       return;
     }
+
+    if (loadVersion !== authLoadVersion || currentUser?.id !== userId) return;
 
     userMissionRecordId = data?.id || null;
     missionState = data
@@ -642,11 +661,16 @@ async function handleAuthSubmit(event) {
 /** 세션이 바뀔 때 사용자 화면과 DB 데이터를 함께 갱신합니다. */
 function handleAuthSession(session) {
   const previousUserId = currentUser?.id || null;
+  authLoadVersion += 1;
+  const loadVersion = authLoadVersion;
   currentUser = session?.user || null;
   currentProfile = null;
   renderAuthState();
   if (currentUser) {
-    loadRemoteAppData();
+    // 인증 콜백이 끝난 다음 최신 세션으로 DB 요청을 시작해 초기화 경합을 피합니다.
+    setTimeout(() => {
+      if (loadVersion === authLoadVersion) loadRemoteAppData(loadVersion);
+    }, 0);
   } else if (previousUserId) {
     resetAppData();
   }
