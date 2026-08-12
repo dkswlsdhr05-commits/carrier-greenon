@@ -7,7 +7,7 @@
       name="description"
       content="Carrier GreenON - 친환경 냉방 미션으로 지구와 포인트를 함께 지키는 서비스"
     />
-    <meta name="theme-color" content="#1677ff" />
+    <meta name="theme-color" content="#139da5" />
     <title>Carrier GreenON</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -36,15 +36,41 @@
 
       <main id="main-content" tabindex="-1">
         <section class="page is-active" id="home-page" data-page="home" aria-labelledby="home-title">
-          <div class="welcome-row">
-            <div>
+          <div class="welcome-row hero-banner" id="greenon-hero">
+            <div class="hero-copy">
               <p class="eyebrow">8월 11일 화요일</p>
+              <span class="hero-kicker"><i aria-hidden="true"></i> GREENON FRIEND</span>
               <h1 id="home-title">오늘도 시원하게,<br /><span>지구는 가볍게!</span></h1>
+              <p class="hero-description">귀여운 에코 메이트와 함께 우리 집 냉방 습관을 바꿔 보세요.</p>
+              <div class="hero-actions">
+                <button class="hero-mission-button" type="button" data-nav-target="mission">
+                  오늘의 미션 시작
+                  <span aria-hidden="true">→</span>
+                </button>
+                <button class="point-chip" type="button" aria-label="현재 그린 포인트 0 포인트" data-nav-target="wallet">
+                  <span aria-hidden="true">🌱</span>
+                  <strong id="home-point-balance">0 P</strong>
+                </button>
+              </div>
             </div>
-            <button class="point-chip" type="button" aria-label="현재 그린 포인트 0 포인트" data-nav-target="wallet">
-              <span aria-hidden="true">🌱</span>
-              <strong id="home-point-balance">0 P</strong>
-            </button>
+
+            <div class="hero-scene" data-mouse-scene>
+              <span class="hero-sun motion-layer" data-motion-depth="0.3" aria-hidden="true"></span>
+              <span class="hero-leaf hero-leaf-one motion-layer" data-motion-depth="0.75" aria-hidden="true">●</span>
+              <span class="hero-leaf hero-leaf-two motion-layer" data-motion-depth="0.5" aria-hidden="true">●</span>
+              <span class="hero-leaf hero-leaf-three motion-layer" data-motion-depth="0.9" aria-hidden="true">●</span>
+              <span class="hero-message motion-layer" data-motion-depth="0.45">오늘도 26°C!</span>
+              <div class="mascot-wrap motion-layer" data-motion-depth="1">
+                <img
+                  class="hero-mascot"
+                  src="assets/greenon-monkey.png"
+                  alt="잎 장식을 하고 손을 흔드는 GreenON 원숭이 마스코트"
+                  width="1199"
+                  height="1312"
+                />
+              </div>
+              <span class="hero-ground" aria-hidden="true"></span>
+            </div>
           </div>
 
           <div class="dashboard-grid">

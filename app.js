@@ -1008,6 +1008,54 @@ async function advanceSimulationTime() {
   advanceButton.disabled = false;
 }
 
+// 마우스가 히어로 영역 안에서 움직이면 캐릭터와 장식이 깊이에 따라 다르게 이동합니다.
+// 터치 기기와 모션 감소 설정에서는 이 효과를 사용하지 않아 조작과 접근성을 방해하지 않습니다.
+function setupHeroMouseMotion() {
+  const hero = document.querySelector('#greenon-hero');
+  if (!hero) return;
+
+  const canUsePointerMotion = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!canUsePointerMotion || prefersReducedMotion) return;
+
+  const layers = [...hero.querySelectorAll('[data-motion-depth]')];
+  let animationFrameId = null;
+  let nextX = 0;
+  let nextY = 0;
+
+  const paintMotion = () => {
+    hero.style.setProperty('--hero-rotate-x', `${(-nextY * 2.1).toFixed(2)}deg`);
+    hero.style.setProperty('--hero-rotate-y', `${(nextX * 2.8).toFixed(2)}deg`);
+
+    layers.forEach((layer) => {
+      const depth = Number(layer.dataset.motionDepth || 0);
+      layer.style.setProperty('--layer-x', `${(nextX * 18 * depth).toFixed(2)}px`);
+      layer.style.setProperty('--layer-y', `${(nextY * 14 * depth).toFixed(2)}px`);
+    });
+
+    animationFrameId = null;
+  };
+
+  const requestMotionPaint = () => {
+    if (animationFrameId !== null) return;
+    animationFrameId = window.requestAnimationFrame(paintMotion);
+  };
+
+  hero.addEventListener('pointerenter', () => hero.classList.add('is-pointer-active'));
+  hero.addEventListener('pointermove', (event) => {
+    const bounds = hero.getBoundingClientRect();
+    nextX = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
+    nextY = ((event.clientY - bounds.top) / bounds.height) * 2 - 1;
+    requestMotionPaint();
+  });
+  hero.addEventListener('pointerleave', () => {
+    hero.classList.remove('is-pointer-active');
+    nextX = 0;
+    nextY = 0;
+    requestMotionPaint();
+  });
+}
+
 // 하단 메뉴와 카드 안의 이동 버튼은 모두 같은 화면 전환 함수를 사용합니다.
 navigationButtons.forEach((button) => {
   button.addEventListener('click', () => showPage(button.dataset.navTarget));
@@ -1083,6 +1131,7 @@ renderWallet();
 renderRewards();
 renderAuthMode();
 renderAuthState();
+setupHeroMouseMotion();
 loadWeather();
 
 if (supabaseClient) {

@@ -5,3 +5,5 @@ node_modules/
 .browser-test*/
 *.log
 *.png
+!assets/
+!assets/greenon-monkey.png
