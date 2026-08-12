@@ -139,16 +139,38 @@ const quickPurchaseCheck = await evaluate(`({
 // 가상 센서 오류를 선택했을 때 Red 오류 클래스가 적용되는지 검사합니다.
 await evaluate("document.querySelector('[data-nav-target=\"home\"]').click(); document.querySelector('[data-error=\"sensor\"]').click(); true");
 await waitFor("document.querySelector('#device-card').classList.contains('is-error')", 'Red 오류 UI');
+const sensorErrorCheck = await evaluate(`({
+  errorUi: document.querySelector('#device-card').classList.contains('is-error'),
+  errorColor: getComputedStyle(document.querySelector('#device-status-badge')).color,
+})`);
 
-const result = await evaluate(`({
+// 리모컨의 미션 추천 설정은 오류를 정상화하고 냉방 26°C로 한 번에 복구해야 합니다.
+await evaluate("document.querySelector('#eco-preset-button').click(); true");
+await waitFor("document.querySelector('#control-temperature').textContent === '26' && document.querySelector('[data-mode=\"cool\"]').classList.contains('is-selected')", '리모컨 미션 추천 설정');
+await waitFor("!document.querySelector('#remote-control-card').classList.contains('is-mission-violated')", '리모컨 미션 조건 정상');
+
+// 25°C로 낮추면 미션 조건 위반이 되어 리모컨과 미션 안내가 Red 상태로 바뀌어야 합니다.
+await evaluate("document.querySelector('#temperature-down').click(); true");
+await waitFor("document.querySelector('#control-temperature').textContent === '25'", '리모컨 온도 조절');
+await waitFor("document.querySelector('#remote-control-card').classList.contains('is-mission-violated')", '리모컨 미션 위반 Red UI');
+const remoteMissionCheck = await evaluate(`({
+  temperature: document.querySelector('#control-temperature').textContent,
+  remoteRed: document.querySelector('#remote-control-card').classList.contains('is-mission-violated'),
+  missionMessage: document.querySelector('#remote-mission-description').textContent,
+})`);
+
+// 회귀 검사 계정의 기존 기기 상태를 정상 냉방 26°C로 되돌립니다.
+await evaluate("document.querySelector('#eco-preset-button').click(); true");
+await waitFor("document.querySelector('#control-temperature').textContent === '26'", '리모컨 상태 원복');
+
+const pageResult = await evaluate(`({
   title: document.title,
   bodyLength: document.body.innerText.trim().length,
   walletBalance: document.querySelector('#wallet-balance').textContent.trim(),
-  errorUi: document.querySelector('#device-card').classList.contains('is-error'),
-  errorColor: getComputedStyle(document.querySelector('#device-status-badge')).color,
   mobileNavVisible: getComputedStyle(document.querySelector('.bottom-nav')).display !== 'none',
   cssApplied: getComputedStyle(document.body).fontFamily.length > 0,
 })`);
+const result = { ...pageResult, ...sensorErrorCheck };
 
 // 마지막으로 로그아웃 버튼을 눌러 세션이 정리되는지 확인합니다.
 await evaluate("document.querySelector('[data-nav-target=\"my\"]').click(); document.querySelector('#logout-button').click(); true");
@@ -164,12 +186,17 @@ if (quickPurchaseCheck.dialogOpened || !quickPurchaseCheck.hasRedCard || !quickP
   throw new Error(`즉시 구매 부족 안내가 올바르지 않습니다: ${JSON.stringify(quickPurchaseCheck)}`);
 }
 
+if (remoteMissionCheck.temperature !== '25' || !remoteMissionCheck.remoteRed || !remoteMissionCheck.missionMessage.includes('26°C')) {
+  throw new Error(`리모컨과 미션 연동이 올바르지 않습니다: ${JSON.stringify(remoteMissionCheck)}`);
+}
+
 console.log(JSON.stringify({
   ...result,
   login: true,
   refreshPersistence: true,
   rewardHistory: true,
   quickPurchase: true,
+  missionRemote: true,
   logout: true,
   browserErrors,
 }));

@@ -781,11 +781,12 @@ function renderMissionState() {
   };
   const statusText = statusMap[missionState.status] || statusMap.ready;
   const powerMet = airconState.power;
+  const modeMet = airconState.mode === 'cool';
   const temperatureMet = airconState.temperature >= 26;
   const durationMet = missionState.elapsedMinutes >= 60;
   const deviceHealthy = airconState.error === 'none';
   const hasConditionWarning = missionState.status === 'active'
-    && (!powerMet || !temperatureMet || airconState.mode !== 'cool' || !deviceHealthy);
+    && (!powerMet || !temperatureMet || !modeMet || !deviceHealthy);
 
   const statusElement = document.querySelector('#mission-status-text');
   const progressText = document.querySelector('#mission-progress-text');
@@ -827,11 +828,15 @@ function renderMissionState() {
   homeMissionStatus.textContent = statusText;
 
   document.querySelector('#condition-power').dataset.step = '1';
-  document.querySelector('#condition-temperature').dataset.step = '2';
-  document.querySelector('#condition-duration').dataset.step = '3';
+  document.querySelector('#condition-mode').dataset.step = '2';
+  document.querySelector('#condition-temperature').dataset.step = '3';
+  document.querySelector('#condition-device').dataset.step = '4';
+  document.querySelector('#condition-duration').dataset.step = '5';
   const showViolation = missionState.status === 'active' || missionState.status === 'failed';
   renderCondition('#condition-power', powerMet, showViolation);
+  renderCondition('#condition-mode', modeMet, showViolation);
   renderCondition('#condition-temperature', temperatureMet, showViolation);
+  renderCondition('#condition-device', deviceHealthy, showViolation);
   renderCondition('#condition-duration', durationMet, false);
 
   infoMessage.classList.toggle('is-warning', hasConditionWarning || missionState.status === 'failed');
@@ -879,6 +884,52 @@ function renderAirconState() {
   document.querySelector('#device-connection-value').textContent = isSensorError ? '오류' : '정상';
   document.querySelector('#control-temperature').textContent = airconState.temperature;
 
+  // 리모컨 LCD와 미션 연동 안내는 같은 가상 에어컨 상태를 즉시 반영합니다.
+  const missionPowerMet = airconState.power;
+  const missionModeMet = airconState.mode === 'cool';
+  const missionTemperatureMet = airconState.temperature >= 26;
+  const missionDeviceHealthy = airconState.error === 'none';
+  const remoteMissionReady = missionPowerMet
+    && missionModeMet
+    && missionTemperatureMet
+    && missionDeviceHealthy;
+  const violatedConditions = [];
+  if (!missionPowerMet) violatedConditions.push('전원 ON');
+  if (!missionModeMet) violatedConditions.push('냉방 모드');
+  if (!missionTemperatureMet) violatedConditions.push('26°C 이상');
+  if (!missionDeviceHealthy) violatedConditions.push('기기 정상');
+
+  const remoteCard = document.querySelector('#remote-control-card');
+  const remoteDisplay = document.querySelector('#remote-display');
+  const remoteMissionLink = document.querySelector('#remote-mission-link');
+  const remoteMissionIcon = remoteMissionLink.querySelector('.remote-mission-icon');
+  remoteCard.classList.toggle('is-mission-violated', !remoteMissionReady);
+  remoteMissionLink.classList.toggle('is-violated', !remoteMissionReady);
+  document.querySelector('#remote-mode-text').textContent = airconState.power
+    ? modeLabels[airconState.mode]
+    : '전원 OFF';
+  document.querySelector('#remote-fan-text').textContent = `FAN ${fanLabels[airconState.fan]}`;
+  document.querySelector('#remote-operation-text').textContent = airconState.power
+    ? `${modeLabels[airconState.mode]} · ${airconState.temperature}°C 운전 중`
+    : '에어컨 전원이 꺼져 있어요';
+  remoteDisplay.setAttribute('aria-label', `${operationText}, 설정 온도 ${airconState.temperature}도`);
+
+  if (missionState.status === 'success') {
+    remoteMissionIcon.textContent = '✓';
+    document.querySelector('#remote-mission-status').textContent = '오늘 미션 완료';
+    document.querySelector('#remote-mission-description').textContent = '친환경 냉방 미션을 성공했어요.';
+  } else if (remoteMissionReady) {
+    remoteMissionIcon.textContent = '✓';
+    document.querySelector('#remote-mission-status').textContent = missionState.status === 'active'
+      ? '미션 진행 중 · 조건 유지'
+      : '미션 참여 준비 완료';
+    document.querySelector('#remote-mission-description').textContent = '현재 리모컨 설정이 모든 미션 조건을 만족해요.';
+  } else {
+    remoteMissionIcon.textContent = '!';
+    document.querySelector('#remote-mission-status').textContent = '미션 조건 확인 필요';
+    document.querySelector('#remote-mission-description').textContent = `${violatedConditions.join(' · ')} 설정이 필요해요.`;
+  }
+
   const powerButton = document.querySelector('#power-button');
   powerButton.classList.toggle('is-on', airconState.power);
   powerButton.setAttribute('aria-pressed', String(airconState.power));
@@ -910,6 +961,21 @@ function renderAirconState() {
   }
 
   renderMissionState();
+}
+
+/** 리모컨을 오늘 미션에 맞는 친환경 냉방 설정으로 한 번에 변경합니다. */
+async function applyMissionPreset() {
+  const nextFilterLevel = airconState.filterLevel < 20 ? 82 : airconState.filterLevel;
+  const saved = await updateAirconState({
+    power: true,
+    mode: 'cool',
+    temperature: 26,
+    fan: 'auto',
+    error: 'none',
+    filterLevel: nextFilterLevel,
+  });
+
+  if (saved) showToast('리모컨을 미션 추천 설정인 냉방 26°C로 맞췄어요.');
 }
 
 /** 참여 전 또는 실패 상태에서 오늘의 미션 기록을 Supabase에 생성하거나 다시 시작합니다. */
@@ -950,7 +1016,7 @@ async function startMission() {
 
   userMissionRecordId = result.data.id;
   missionState = { status: 'active', elapsedMinutes: 0, rewardClaimed: false };
-  renderMissionState();
+  renderAirconState();
   showToast('오늘의 GREEN MISSION을 시작했어요!');
 }
 
@@ -1120,6 +1186,7 @@ document.querySelector('#temperature-down').addEventListener('click', () => upda
 document.querySelector('#temperature-up').addEventListener('click', () => updateAirconState({
   temperature: Math.min(30, airconState.temperature + 1),
 }));
+document.querySelector('#eco-preset-button').addEventListener('click', applyMissionPreset);
 document.querySelectorAll('[data-mode]').forEach((button) => {
   button.addEventListener('click', () => updateAirconState({ mode: button.dataset.mode }));
 });

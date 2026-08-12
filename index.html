@@ -198,49 +198,85 @@
               </div>
             </article>
 
-            <article class="control-card" aria-labelledby="control-title">
-              <div class="control-heading">
-                <div>
-                  <p class="card-label">SIMULATION PANEL</p>
-                  <h2 id="control-title">가상 리모컨</h2>
+            <article class="control-card remote-control-card" id="remote-control-card" aria-labelledby="control-title">
+              <div class="remote-shell">
+                <div class="remote-topline">
+                  <span class="remote-brand">Carrier <b>GreenON</b></span>
+                  <span class="remote-signal" aria-label="가상 에어컨 연결됨"><i></i><i></i><i></i></span>
                 </div>
-                <button class="power-button is-on" id="power-button" type="button" aria-pressed="true">
-                  <span aria-hidden="true">⏻</span> ON
+
+                <div class="control-heading">
+                  <div>
+                    <p class="card-label">SMART ECO REMOTE</p>
+                    <h2 id="control-title">미션 연동 리모컨</h2>
+                  </div>
+                  <button class="power-button is-on" id="power-button" type="button" aria-pressed="true">
+                    <span aria-hidden="true">⏻</span> ON
+                  </button>
+                </div>
+
+                <div class="remote-display" id="remote-display" aria-live="polite">
+                  <div class="remote-display-top">
+                    <span id="remote-mode-text">냉방</span>
+                    <span id="remote-fan-text">FAN 자동</span>
+                  </div>
+                  <div class="remote-temperature">
+                    <strong><span id="control-temperature">26</span><small>°C</small></strong>
+                    <span class="remote-eco-mark">ECO</span>
+                  </div>
+                  <p id="remote-operation-text">친환경 냉방 운전 중</p>
+                </div>
+
+                <div class="control-group remote-temperature-group">
+                  <span class="control-label">온도 조절</span>
+                  <div class="temperature-control">
+                    <button type="button" id="temperature-down" aria-label="설정 온도 1도 낮추기"><span>−</span><small>낮춤</small></button>
+                    <span class="temperature-guide">18°C</span>
+                    <span class="temperature-guide">30°C</span>
+                    <button type="button" id="temperature-up" aria-label="설정 온도 1도 높이기"><span>＋</span><small>높임</small></button>
+                  </div>
+                </div>
+
+                <button class="eco-preset-button" id="eco-preset-button" type="button">
+                  <span aria-hidden="true">🌿</span>
+                  <span><strong>미션 추천 설정</strong><small>전원 ON · 냉방 · 26°C · 정상</small></span>
+                  <span aria-hidden="true">→</span>
                 </button>
-              </div>
 
-              <div class="control-group">
-                <span class="control-label">설정 온도</span>
-                <div class="temperature-control">
-                  <button type="button" id="temperature-down" aria-label="설정 온도 1도 낮추기">−</button>
-                  <strong><span id="control-temperature">26</span>°C</strong>
-                  <button type="button" id="temperature-up" aria-label="설정 온도 1도 높이기">＋</button>
+                <div class="control-group">
+                  <span class="control-label">운전 모드</span>
+                  <div class="segmented-control" id="mode-control" role="group" aria-label="운전 모드">
+                    <button class="is-selected" type="button" data-mode="cool">❄ 냉방</button>
+                    <button type="button" data-mode="dry">💧 제습</button>
+                    <button type="button" data-mode="fan">〰 송풍</button>
+                  </div>
                 </div>
-              </div>
 
-              <div class="control-group">
-                <span class="control-label">운전 모드</span>
-                <div class="segmented-control" id="mode-control" role="group" aria-label="운전 모드">
-                  <button class="is-selected" type="button" data-mode="cool">냉방</button>
-                  <button type="button" data-mode="dry">제습</button>
-                  <button type="button" data-mode="fan">송풍</button>
+                <div class="control-group">
+                  <span class="control-label">바람 세기</span>
+                  <div class="segmented-control" id="fan-control" role="group" aria-label="바람 세기">
+                    <button class="is-selected" type="button" data-fan="auto">자동</button>
+                    <button type="button" data-fan="low">약풍</button>
+                    <button type="button" data-fan="high">강풍</button>
+                  </div>
                 </div>
-              </div>
 
-              <div class="control-group">
-                <span class="control-label">바람 세기</span>
-                <div class="segmented-control" id="fan-control" role="group" aria-label="바람 세기">
-                  <button class="is-selected" type="button" data-fan="auto">자동</button>
-                  <button type="button" data-fan="low">약풍</button>
-                  <button type="button" data-fan="high">강풍</button>
+                <div class="remote-mission-link" id="remote-mission-link">
+                  <span class="remote-mission-icon" aria-hidden="true">✓</span>
+                  <div>
+                    <span>TODAY'S MISSION</span>
+                    <strong id="remote-mission-status">미션 진행 가능</strong>
+                    <p id="remote-mission-description">현재 설정이 친환경 냉방 조건을 만족해요.</p>
+                  </div>
+                  <button type="button" data-nav-target="mission">미션 보기</button>
                 </div>
-              </div>
 
-              <div class="simulation-actions">
-                <button class="primary-button time-button" id="advance-time-button" type="button">
-                  <span aria-hidden="true">⏱</span> 시간 +30분
-                </button>
-                <p>버튼을 누르면 현재 설정으로 30분 사용한 상황을 시뮬레이션해요.</p>
+                <div class="simulation-actions">
+                  <button class="primary-button time-button" id="advance-time-button" type="button">
+                    <span aria-hidden="true">⏱</span> 현재 설정으로 30분 진행
+                  </button>
+                  <p>미션 참여 후 누르면 리모컨의 현재 설정으로 사용 시간이 기록돼요.</p>
+                </div>
               </div>
 
               <details class="error-simulator">
@@ -321,12 +357,20 @@
                   <span class="condition-check" aria-hidden="true">1</span>
                   <div><strong>에어컨 켜기</strong><p>POWER가 ON 상태여야 해요.</p></div>
                 </li>
-                <li id="condition-temperature">
+                <li id="condition-mode">
                   <span class="condition-check" aria-hidden="true">2</span>
+                  <div><strong>냉방 모드 선택</strong><p>리모컨 운전 모드를 냉방으로 맞춰 주세요.</p></div>
+                </li>
+                <li id="condition-temperature">
+                  <span class="condition-check" aria-hidden="true">3</span>
                   <div><strong>26°C 이상 설정</strong><p>적정 냉방 온도를 지켜 주세요.</p></div>
                 </li>
+                <li id="condition-device">
+                  <span class="condition-check" aria-hidden="true">4</span>
+                  <div><strong>기기 상태 정상</strong><p>필터와 온도 센서가 정상이어야 해요.</p></div>
+                </li>
                 <li id="condition-duration">
-                  <span class="condition-check" aria-hidden="true">3</span>
+                  <span class="condition-check" aria-hidden="true">5</span>
                   <div><strong>60분 유지</strong><p>조건을 지킨 시간만 기록돼요.</p></div>
                 </li>
               </ul>
