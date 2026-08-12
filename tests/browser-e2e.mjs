@@ -125,6 +125,17 @@ await waitFor("document.querySelector('#wallet-balance').textContent.trim() === 
 await evaluate("document.querySelector('[data-nav-target=\"reward\"]').click()");
 await waitFor("document.querySelector('#order-list').innerText.includes('구매 완료')", '구매내역');
 
+// 상품 카드의 바로 구매 버튼을 누르면 상세 모달 없이 즉시 구매 흐름이 시작되는지 확인합니다.
+// 이 테스트 계정은 첫 상품보다 포인트가 적어 실제 주문은 만들지 않고 Red 부족 안내만 검사합니다.
+await waitFor("document.querySelectorAll('[data-quick-purchase]').length > 0", '바로 구매 버튼');
+await evaluate("document.querySelector('[data-quick-purchase]').click(); true");
+await waitFor("document.querySelector('[data-quick-message]:not([hidden])') !== null", '즉시 구매 포인트 부족 안내');
+const quickPurchaseCheck = await evaluate(`({
+  dialogOpened: document.querySelector('#product-dialog').open,
+  hasRedCard: document.querySelector('[data-product-card-id]').classList.contains('has-purchase-error'),
+  message: document.querySelector('[data-quick-message]:not([hidden])').textContent,
+})`);
+
 // 가상 센서 오류를 선택했을 때 Red 오류 클래스가 적용되는지 검사합니다.
 await evaluate("document.querySelector('[data-nav-target=\"home\"]').click(); document.querySelector('[data-error=\"sensor\"]').click(); true");
 await waitFor("document.querySelector('#device-card').classList.contains('is-error')", 'Red 오류 UI');
@@ -149,11 +160,16 @@ if (result.errorColor !== 'rgb(201, 45, 63)') {
   throw new Error(`오류 상태 색상이 Red 규칙과 다릅니다: ${result.errorColor}`);
 }
 
+if (quickPurchaseCheck.dialogOpened || !quickPurchaseCheck.hasRedCard || !quickPurchaseCheck.message.includes('부족')) {
+  throw new Error(`즉시 구매 부족 안내가 올바르지 않습니다: ${JSON.stringify(quickPurchaseCheck)}`);
+}
+
 console.log(JSON.stringify({
   ...result,
   login: true,
   refreshPersistence: true,
   rewardHistory: true,
+  quickPurchase: true,
   logout: true,
   browserErrors,
 }));

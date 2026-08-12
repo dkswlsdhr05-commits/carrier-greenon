@@ -73,6 +73,7 @@ let rewardProducts = [...defaultRewardProducts];
 let historyFilter = 'all';
 let rewardCategory = 'all';
 let selectedProductId = null;
+let purchasingProductId = null;
 let toastTimer;
 let authMode = 'login';
 let currentUser = null;
@@ -243,18 +244,30 @@ function renderRewards() {
   });
   document.querySelector('#product-count').textContent = `${visibleProducts.length}개`;
   document.querySelector('#product-grid').innerHTML = visibleProducts.map((product) => `
-    <button class="product-card" type="button" data-product-id="${product.id}" data-category="${product.category}" aria-label="${product.name} 상세 보기">
-      <span class="product-visual" aria-hidden="true">${product.icon}</span>
-      <span class="product-copy">
-        <span class="product-category">${categoryLabels[product.category]}</span>
-        <h3>${product.name}</h3>
+    <article class="product-card" data-product-card-id="${product.id}" data-category="${product.category}">
+      <button class="product-detail-button" type="button" data-product-detail="${product.id}" aria-label="${product.name} 상세 보기">
+        <span class="product-visual" aria-hidden="true">${product.icon}</span>
+        <span class="product-copy">
+          <span class="product-category">${categoryLabels[product.category]}</span>
+          <h3>${product.name}</h3>
+          <span class="product-detail-label">상품 설명 보기 →</span>
+        </span>
+      </button>
+      <div class="product-purchase-row">
         <strong>${product.price.toLocaleString('ko-KR')} P</strong>
-      </span>
-    </button>
+        <button class="quick-purchase-button" type="button" data-quick-purchase="${product.id}">
+          바로 구매
+        </button>
+      </div>
+      <p class="quick-purchase-message" data-quick-message="${product.id}" role="alert" hidden></p>
+    </article>
   `).join('');
 
-  document.querySelectorAll('[data-product-id]').forEach((button) => {
-    button.addEventListener('click', () => openProductDialog(button.dataset.productId));
+  document.querySelectorAll('[data-product-detail]').forEach((button) => {
+    button.addEventListener('click', () => openProductDialog(button.dataset.productDetail));
+  });
+  document.querySelectorAll('[data-quick-purchase]').forEach((button) => {
+    button.addEventListener('click', () => purchaseProduct(button.dataset.quickPurchase, 'quick'));
   });
 
   const orderList = document.querySelector('#order-list');
@@ -298,27 +311,56 @@ function openProductDialog(productId) {
   document.querySelector('#product-dialog').showModal();
 }
 
-/** 보유 포인트를 확인한 뒤 상품 구매, 포인트 차감, 구매내역 생성을 한 번에 처리합니다. */
-async function purchaseSelectedProduct() {
-  const product = rewardProducts.find((item) => item.id === selectedProductId);
+/** 상품 카드 또는 상세 창에서 구매 버튼과 오류 문구를 찾습니다. */
+function getPurchaseUi(productId, source) {
+  if (source === 'quick') {
+    return {
+      button: [...document.querySelectorAll('[data-quick-purchase]')]
+        .find((item) => item.dataset.quickPurchase === productId),
+      message: [...document.querySelectorAll('[data-quick-message]')]
+        .find((item) => item.dataset.quickMessage === productId),
+      card: [...document.querySelectorAll('[data-product-card-id]')]
+        .find((item) => item.dataset.productCardId === productId),
+    };
+  }
+
+  return {
+    button: document.querySelector('#purchase-button'),
+    message: document.querySelector('#purchase-message'),
+    card: null,
+  };
+}
+
+/** 보유 포인트 확인부터 주문 생성과 차감까지 한 번에 처리합니다. */
+async function purchaseProduct(productId, source = 'dialog') {
+  const product = rewardProducts.find((item) => item.id === productId);
   if (!product) return;
 
+  // 빠르게 여러 번 눌러 같은 상품이 중복 주문되는 것을 막습니다.
+  if (purchasingProductId) return;
+
+  const purchaseUi = getPurchaseUi(productId, source);
+
   if (!requireSignedIn('리워드를 구매하려면 먼저 로그인해 주세요.')) {
-    document.querySelector('#product-dialog').close();
+    if (source === 'dialog') document.querySelector('#product-dialog').close();
     return;
   }
 
-  const purchaseMessage = document.querySelector('#purchase-message');
   if (walletState.balance < product.price) {
     const shortage = product.price - walletState.balance;
-    purchaseMessage.textContent = `포인트가 ${shortage.toLocaleString('ko-KR')} P 부족해요. 미션을 더 완료해 주세요.`;
-    purchaseMessage.hidden = false;
+    const shortageMessage = `포인트가 ${shortage.toLocaleString('ko-KR')} P 부족해요.`;
+    purchaseUi.message.textContent = `${shortageMessage} 미션을 더 완료해 주세요.`;
+    purchaseUi.message.hidden = false;
+    purchaseUi.card?.classList.add('has-purchase-error');
+    showToast(shortageMessage);
     return;
   }
 
-  const purchaseButton = document.querySelector('#purchase-button');
-  purchaseButton.disabled = true;
-  purchaseButton.textContent = '구매 처리 중...';
+  purchasingProductId = productId;
+  purchaseUi.message.hidden = true;
+  purchaseUi.card?.classList.remove('has-purchase-error');
+  purchaseUi.button.disabled = true;
+  purchaseUi.button.textContent = '구매 중...';
 
   const { error } = await supabaseClient.from('reward_orders').insert({
     user_id: currentUser.id,
@@ -327,21 +369,30 @@ async function purchaseSelectedProduct() {
     price: product.price,
   });
 
-  purchaseButton.disabled = false;
-  purchaseButton.textContent = '포인트로 구매하기';
+  purchasingProductId = null;
+  purchaseUi.button.disabled = false;
+  purchaseUi.button.textContent = source === 'quick' ? '바로 구매' : '포인트로 구매하기';
 
   if (error) {
     const isInsufficient = error.message.includes('insufficient_points');
-    purchaseMessage.textContent = isInsufficient
+    purchaseUi.message.textContent = isInsufficient
       ? '포인트가 부족해요. 미션을 더 완료한 뒤 다시 시도해 주세요.'
       : '구매 처리 중 문제가 발생했어요. 잠시 후 다시 시도해 주세요.';
-    purchaseMessage.hidden = false;
+    purchaseUi.message.hidden = false;
+    purchaseUi.card?.classList.add('has-purchase-error');
+    showToast(purchaseUi.message.textContent);
     return;
   }
 
   await refreshWalletAndOrders();
-  document.querySelector('#product-dialog').close();
+  if (source === 'dialog') document.querySelector('#product-dialog').close();
   showToast(`${product.name} 구매 완료! ${product.price.toLocaleString('ko-KR')} P를 사용했어요.`);
+}
+
+/** 상세 창 구매 버튼은 선택된 상품을 공통 구매 함수에 전달합니다. */
+async function purchaseSelectedProduct() {
+  if (!selectedProductId) return;
+  await purchaseProduct(selectedProductId, 'dialog');
 }
 
 /** 로그인/회원가입 탭에 맞춰 입력 필드와 버튼 문구를 바꿉니다. */
